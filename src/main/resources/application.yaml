@@ -21,3 +21,13 @@ security:
     private-key-path: ${JWT_PRIVATE_KEY_LOCATION:file:/run/secrets/jwt-private.pem}
     public-key-path: ${JWT_PUBLIC_KEY_LOCATION:file:/run/secrets/jwt-public.pem}
     issuer: ${JWT_ISSUER:logitrack-security}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
