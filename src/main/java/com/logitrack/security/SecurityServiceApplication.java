@@ -10,13 +10,14 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 
 @OpenAPIDefinition(
+    info = @io.swagger.v3.oas.annotations.info.Info(title = "LogiTrack Security API", version = "Sprint 3"),
     security = @SecurityRequirement(name = "bearerAuth")
 )
 @SecurityScheme(
     name = "bearerAuth",
     type = SecuritySchemeType.HTTP,
     scheme = "bearer",
-    bearerFormat = "JWT"
+    bearerFormat = "JWT RS256"
 )
 @EnableJpaAuditing
 @SpringBootApplication

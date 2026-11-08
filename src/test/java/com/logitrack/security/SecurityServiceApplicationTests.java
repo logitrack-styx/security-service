@@ -47,6 +47,31 @@ class SecurityServiceApplicationTests {
     @Autowired MockMvc mvc;
     @Autowired UsuarioRepository usuarios;
     @Autowired ObjectMapper mapper;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder encoder;
+
+    @Test
+    void bootstrapIsIdempotentAndEmailLoginRespectsDisabledAccounts() throws Exception {
+        var bootstrap = new com.logitrack.security.config.AdminBootstrap(usuarios, encoder,
+                "bootstrap-admin", "bootstrap@example.invalid", "test-password-123");
+        bootstrap.run();
+        bootstrap.run();
+        org.junit.jupiter.api.Assertions.assertEquals(1, usuarios.count());
+        var admin = usuarios.findByUsername("bootstrap-admin").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertTrue(encoder.matches("test-password-123", admin.getPassword()));
+        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"bootstrap@example.invalid\",\"password\":\"test-password-123\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.expiresIn").value(3600));
+        admin.setEneable(false);
+        usuarios.saveAndFlush(admin);
+        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"bootstrap-admin\",\"password\":\"test-password-123\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"missing-user\",\"password\":\"test-password-123\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/auth/login']").exists());
+    }
 
     @DynamicPropertySource
     static void jwtTestKeys(DynamicPropertyRegistry registry) {

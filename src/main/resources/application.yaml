@@ -21,6 +21,7 @@ security:
     private-key-path: ${JWT_PRIVATE_KEY_LOCATION:file:/run/secrets/jwt-private.pem}
     public-key-path: ${JWT_PUBLIC_KEY_LOCATION:file:/run/secrets/jwt-public.pem}
     issuer: ${JWT_ISSUER:logitrack-security}
+    access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:3600}
 
 management:
   endpoints:

@@ -31,7 +31,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 
 @Configuration
 public class JwtConfig {
-	
+
 	@Value("${security.jwt.public-key-path}")
     private Resource publicKeyResource;
 
@@ -40,36 +40,36 @@ public class JwtConfig {
 
     @Value("${security.jwt.issuer}")
     private String issuer;
-    
+
     @Bean
     public RSAPrivateKey rsaPrivateKey() throws Exception {
     	byte[] keyBytes = Files.readAllBytes(Paths.get(privateKeyResource.getURI()));
-        
+
         String privateKeyPEM = new String(keyBytes, StandardCharsets.UTF_8)
                 .replace("-----BEGIN PRIVATE KEY-----", "")
                 .replace("-----END PRIVATE KEY-----", "")
                 .replaceAll("\\s", "");
-        
+
         byte[] decodeKey = Base64.getDecoder().decode(privateKeyPEM);
-        
+
         KeyFactory kf = KeyFactory.getInstance("RSA");
-        
+
         return (RSAPrivateKey) kf.generatePrivate(new PKCS8EncodedKeySpec(decodeKey));
     }
 
     @Bean
     public RSAPublicKey rsaPublicKey() throws Exception {
     	byte[] keyBytes = Files.readAllBytes(Paths.get(publicKeyResource.getURI()));
-    	
+
         String publicKeyPEM = new String(keyBytes, StandardCharsets.UTF_8)
                 .replace("-----BEGIN PUBLIC KEY-----", "")
                 .replace("-----END PUBLIC KEY-----", "")
                 .replaceAll("\\s", "");
-        
+
         byte[] decodeKey = Base64.getDecoder().decode(publicKeyPEM);
-        
+
         KeyFactory kf = KeyFactory.getInstance("RSA");
-        
+
         return (RSAPublicKey) kf.generatePublic(new X509EncodedKeySpec(decodeKey));
     }
 
@@ -91,7 +91,26 @@ public class JwtConfig {
                 .signatureAlgorithm(SignatureAlgorithm.RS256)
                 .build();
 
-        OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(issuer));
+
+        OAuth2TokenValidator<Jwt> identity = jwt -> {
+            try {
+                String sub = jwt.getSubject();
+                Object claim = jwt.getClaims().get("roles");
+                if (sub == null || !java.util.UUID.fromString(sub).toString().equals(sub)
+                        || jwt.getExpiresAt() == null
+                        || !(claim instanceof java.util.List<?> roles) || roles.size() != 1
+                        || !(roles.get(0) instanceof String role)
+                        || !java.util.List.of("ADMIN", "CLIENTE", "REPARTIDOR").contains(role)) {
+                    throw new IllegalArgumentException();
+                }
+                return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success();
+            } catch (IllegalArgumentException ex) {
+                return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
+                        new org.springframework.security.oauth2.core.OAuth2Error("invalid_token"));
+            }
+        };
+
+        OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefaultWithIssuer(issuer), identity);
 
         decoder.setJwtValidator(validator);
 

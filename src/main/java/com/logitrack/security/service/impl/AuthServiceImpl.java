@@ -24,11 +24,11 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthServiceImpl implements AuthService {
-	
+
 	private final UsuarioRepository usuarioRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
-	
+
 	@Override
 	@Transactional
 	public UsuarioResponse register(RegisterRequest request) {
@@ -53,17 +53,19 @@ public class AuthServiceImpl implements AuthService {
 		log.info("Se ha registrado el Usuario: " + usuario.getId());
 	    return mapToResponse(usuario);
 	}
-	
+
 	@Override
 	@Transactional
 	public AuthResponse login(LoginRequest request) throws Exception {
-		Usuario usuario = usuarioRepository.findByUsername(request.getUsername())
+		Usuario usuario = (request.getEmail() != null && !request.getEmail().isBlank()
+                ? usuarioRepository.findByEmail(request.getEmail())
+                : usuarioRepository.findByUsername(request.getUsername()))
 	            .orElseThrow(() -> {
                 	log.info("No se ha encontrado el Usuario: " + request.getUsername());
-	            	return new UsuarioNoEncontradoException(request.getUsername());
+                    return new CredencialesInvalidasException("usuario");
 	            });
 
-	    if (!passwordEncoder.matches(
+	    if (!usuario.isEneable() || !passwordEncoder.matches(
 	            request.getPassword(),
 	            usuario.getPassword()
 	    )) {
@@ -75,11 +77,12 @@ public class AuthServiceImpl implements AuthService {
 
 	    log.info("Se ha logeadoc el Usuario: " + usuario.getId());
 	    return AuthResponse.builder()
+	            .expiresIn(jwtService.expiresIn())
 	    		.accessToken(token)
 	    		.tokenType("Bearer")
 	    		.build();
 	}
-	
+
 	private UsuarioResponse mapToResponse(Usuario usuario) {
 		return UsuarioResponse.builder()
 				.id(usuario.getId())
@@ -89,5 +92,5 @@ public class AuthServiceImpl implements AuthService {
 				.eneable(usuario.isEneable())
 				.build();
 	}
-	
+
 }

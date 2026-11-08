@@ -24,15 +24,30 @@ public class JwtServiceImp implements JwtService {
 
     @Value("${security.jwt.issuer}")
     private String issuer;
-    
+
+    @Value("${security.jwt.access-token-ttl:3600}")
+    private long accessTokenTtl;
+
+    /** @return segundos de vigencia utilizados en exp. */
+    @Override
+    public long expiresIn() { return accessTokenTtl; }
+
+    /** Rechaza una configuración que emitiría tokens sin vigencia útil. */
+    @jakarta.annotation.PostConstruct
+    public void validateTtl() {
+        if (accessTokenTtl <= 0) {
+            throw new IllegalArgumentException("security.jwt.access-token-ttl must be positive seconds");
+        }
+    }
+
     private final JwtEncoder jwtEncoder;
-    
+
     @Override
     public String generateToken(Usuario user) throws Exception {
     	List<String> roles = List.of(user.getRole().toString());
-    	
+
     	Instant now = Instant.now();
-        Instant expiresAt = now.plusSeconds(3600);
+        Instant expiresAt = now.plusSeconds(accessTokenTtl);
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
