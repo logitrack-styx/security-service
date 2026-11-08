@@ -50,6 +50,21 @@ class SecurityServiceApplicationTests {
     @Autowired org.springframework.security.crypto.password.PasswordEncoder encoder;
 
     @Test
+    void loginAndValidationErrorsUseCommonUtcEnvelope() throws Exception {
+        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"missing\",\"password\":\"test-password-123\"}"))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.mensaje").isString())
+                .andExpect(jsonPath("$.timestamp", org.hamcrest.Matchers.endsWith("Z")))
+                .andExpect(jsonPath("$.*", org.hamcrest.Matchers.hasSize(4)));
+        mvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.mensaje").isString())
+                .andExpect(jsonPath("$.*", org.hamcrest.Matchers.hasSize(4)));
+    }
+
+    @Test
     void bootstrapIsIdempotentAndEmailLoginRespectsDisabledAccounts() throws Exception {
         var bootstrap = new com.logitrack.security.config.AdminBootstrap(usuarios, encoder,
                 "bootstrap-admin", "bootstrap@example.invalid", "test-password-123");

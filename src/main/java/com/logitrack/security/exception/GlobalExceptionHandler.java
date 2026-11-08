@@ -1,6 +1,6 @@
 package com.logitrack.security.exception;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +11,31 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    /**
+     * @param ex entrada inválida, sin exponer su contenido
+     * @return error 400 con formato común
+     */
+    @ExceptionHandler({org.springframework.web.bind.MethodArgumentNotValidException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class, IllegalArgumentException.class})
+    public ResponseEntity<ErrorResponse> invalidInput(Exception ex) {
+        return common(HttpStatus.BAD_REQUEST, "Datos de entrada inválidos");
+    }
+
+    /** @param ex conflicto de persistencia; @return 409 sin SQL ni datos sensibles. */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> duplicate(org.springframework.dao.DataIntegrityViolationException ex) {
+        return common(HttpStatus.CONFLICT, "La identidad ya está registrada");
+    }
+
+    private ResponseEntity<ErrorResponse> common(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(new ErrorResponse(
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC), status.value(), status.getReasonPhrase(), message, null));
+    }
 	
 	@ExceptionHandler(CredencialesInvalidasException.class)
 	public ResponseEntity<ErrorResponse> handleCredencialesInvalidas(CredencialesInvalidasException ex, HttpServletRequest request){
 		ErrorResponse error = new ErrorResponse(
-				LocalDateTime.now(),
+				OffsetDateTime.now(java.time.ZoneOffset.UTC),
 				HttpStatus.UNAUTHORIZED.value(),
 				"Credenciales Invalidas",
 				ex.getMessage(),
@@ -30,7 +50,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(PermisosInsuficientesException.class)
 	public ResponseEntity<ErrorResponse> handlePermisosInsuficientes(PermisosInsuficientesException ex, HttpServletRequest request){
 		ErrorResponse error = new ErrorResponse(
-				LocalDateTime.now(),
+				OffsetDateTime.now(java.time.ZoneOffset.UTC),
 				HttpStatus.FORBIDDEN.value(),
 				"Credenciales Invalidas",
 				ex.getMessage(),
@@ -45,7 +65,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(RolInvalidoException.class)
 	public ResponseEntity<ErrorResponse> handleRolInvalido(RolInvalidoException ex, HttpServletRequest request){
 		ErrorResponse error = new ErrorResponse(
-				LocalDateTime.now(),
+				OffsetDateTime.now(java.time.ZoneOffset.UTC),
 				HttpStatus.BAD_REQUEST.value(),
 				"Credenciales Invalidas",
 				ex.getMessage(),
@@ -60,7 +80,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(TokenExpiradoException.class)
 	public ResponseEntity<ErrorResponse> handleTokenExpirado(TokenExpiradoException ex, HttpServletRequest request){
 		ErrorResponse error = new ErrorResponse(
-				LocalDateTime.now(),
+				OffsetDateTime.now(java.time.ZoneOffset.UTC),
 				HttpStatus.UNAUTHORIZED.value(),
 				"Credenciales Invalidas",
 				ex.getMessage(),
@@ -75,7 +95,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(TokenInvalidoException.class)
 	public ResponseEntity<ErrorResponse> handleTokenInvalido(TokenInvalidoException ex, HttpServletRequest request){
 		ErrorResponse error = new ErrorResponse(
-				LocalDateTime.now(),
+				OffsetDateTime.now(java.time.ZoneOffset.UTC),
 				HttpStatus.UNAUTHORIZED.value(),
 				"Credenciales Invalidas",
 				ex.getMessage(),
@@ -90,7 +110,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(UsuarioNoEncontradoException.class)
 	public ResponseEntity<ErrorResponse> handleUsuarioNoEncontrado(UsuarioNoEncontradoException ex, HttpServletRequest request){
 		ErrorResponse error = new ErrorResponse(
-				LocalDateTime.now(),
+				OffsetDateTime.now(java.time.ZoneOffset.UTC),
 				HttpStatus.NOT_FOUND.value(),
 				"Credenciales Invalidas",
 				ex.getMessage(),
@@ -105,7 +125,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(UsuarioYaExistenteException.class)
 	public ResponseEntity<ErrorResponse> handleUsuarioYaExistente(UsuarioYaExistenteException ex, HttpServletRequest request){
 		ErrorResponse error = new ErrorResponse(
-				LocalDateTime.now(),
+				OffsetDateTime.now(java.time.ZoneOffset.UTC),
 				HttpStatus.CONFLICT.value(),
 				"Credenciales Invalidas",
 				ex.getMessage(),
