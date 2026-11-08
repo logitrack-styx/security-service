@@ -26,8 +26,9 @@ public class UsuarioRequest {
         example = "repartidor01",
         requiredMode = Schema.RequiredMode.REQUIRED
     )
+    @com.fasterxml.jackson.annotation.JsonAlias("nombre")
 	private String username;
-	
+
 	@NotBlank
 	@Email
 	@Schema(
@@ -37,7 +38,7 @@ public class UsuarioRequest {
         requiredMode = Schema.RequiredMode.REQUIRED
     )
 	private String email;
-	
+
 	@NotBlank
 	@Schema(
         description = "Contraseña inicial del usuario",
@@ -46,7 +47,7 @@ public class UsuarioRequest {
         requiredMode = Schema.RequiredMode.REQUIRED
     )
 	private String password;
-	
+
 	@NotNull
 	@Schema(
         description = "Rol que tendrá el usuario",
@@ -54,5 +55,5 @@ public class UsuarioRequest {
         requiredMode = Schema.RequiredMode.REQUIRED
     )
 	private RolUsuario role;
-	
+
 }

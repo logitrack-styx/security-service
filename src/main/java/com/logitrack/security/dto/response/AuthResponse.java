@@ -14,19 +14,21 @@ import lombok.Setter;
 @AllArgsConstructor
 @Schema(description = "Respuesta de autenticación con el token de acceso")
 public class AuthResponse {
-	
+    @Schema(description = "Vigencia del token de acceso en segundos", example = "3600")
+    private long expiresIn;
+
 	@Schema(
         description = "Token JWT utilizado para autenticar las solicitudes posteriores",
-        example = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NSJ9.signature",
+        example = "<JWT RS256 devuelto por login>",
         requiredMode = Schema.RequiredMode.REQUIRED
     )
 	private String accessToken;
-	
+
 	@Schema(
         description = "Tipo de token utilizado para la autenticación",
         example = "Bearer",
         requiredMode = Schema.RequiredMode.REQUIRED
     )
 	private String tokenType;
-	
+
 }

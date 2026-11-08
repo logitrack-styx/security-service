@@ -23,8 +23,9 @@ public class RegisterRequest {
         example = "nuevoUsuario",
         requiredMode = Schema.RequiredMode.REQUIRED
     )
+    @com.fasterxml.jackson.annotation.JsonAlias("nombre")
 	private String username;
-	
+
 	@NotBlank
 	@Email
 	@Schema(
@@ -34,7 +35,7 @@ public class RegisterRequest {
         requiredMode = Schema.RequiredMode.REQUIRED
     )
 	private String email;
-	
+
 	@NotBlank
 	@Schema(
         description = "Contraseña para crear la cuenta",
@@ -43,5 +44,5 @@ public class RegisterRequest {
         requiredMode = Schema.RequiredMode.REQUIRED
     )
 	private String password;
-	
+
 }

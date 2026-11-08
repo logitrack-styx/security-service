@@ -18,7 +18,9 @@ import lombok.Setter;
 @AllArgsConstructor
 @Schema(description = "Información de un usuario registrado en LogiTrack")
 public class UsuarioResponse {
-	
+    /** @return nombre contractual, conservando username para clientes existentes. */
+    public String getNombre() { return username; }
+
 	@Schema(
         description = "Identificador único del usuario",
         example = "550e8400-e29b-41d4-a716-446655440000",
