@@ -11,6 +11,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.core.io.ClassPathResource;
@@ -50,38 +51,48 @@ class NotificationWorkerTest {
             var transaction = new TransactionTemplate(new DataSourceTransactionManager(database));
             var sender = mock(NotificationSender.class);
             var worker = new NotificationWorker(jdbc, sender);
+            var metrics = new SimpleMeterRegistry();
+            try {
+                var health = new NotificationOutboxHealth(jdbc, metrics);
+                assertEquals("UP", health.health().getStatus().getCode());
+                assertEquals(0.0, metrics.get("logitrack.notification.outbox.pending").gauge().value());
 
-            transaction.executeWithoutResult(status -> {
-                outbox.enqueueWelcome(UUID.randomUUID(), "rollback@example.invalid");
-                status.setRollbackOnly();
-            });
-            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM outbox_notifications", Integer.class));
+                transaction.executeWithoutResult(status -> {
+                    outbox.enqueueWelcome(UUID.randomUUID(), "rollback@example.invalid");
+                    status.setRollbackOnly();
+                });
+                assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM outbox_notifications", Integer.class));
 
-            var id = UUID.randomUUID();
-            transaction.executeWithoutResult(status -> outbox.enqueueWelcome(id, "test@example.invalid"));
-            doThrow(new MailSendException("SMTP unavailable")).doNothing()
-                    .when(sender).sendWelcome(id.toString(), "test@example.invalid");
-            worker.deliverDueNotifications();
-            assertEquals("PENDING", jdbc.queryForObject("SELECT status FROM outbox_notifications", String.class));
-            worker.deliverDueNotifications();
-            verify(sender).sendWelcome(id.toString(), "test@example.invalid");
+                var id = UUID.randomUUID();
+                transaction.executeWithoutResult(status -> outbox.enqueueWelcome(id, "test@example.invalid"));
+                doThrow(new MailSendException("SMTP unavailable")).doNothing()
+                        .when(sender).sendWelcome(id.toString(), "test@example.invalid");
+                worker.deliverDueNotifications();
+                assertEquals("PENDING", jdbc.queryForObject("SELECT status FROM outbox_notifications", String.class));
+                worker.deliverDueNotifications();
+                verify(sender).sendWelcome(id.toString(), "test@example.invalid");
 
-            jdbc.update("UPDATE outbox_notifications SET next_attempt_at = ?", Timestamp.from(Instant.now()));
-            worker.deliverDueNotifications();
-            worker.deliverDueNotifications();
-            assertEquals("SENT", jdbc.queryForObject("SELECT status FROM outbox_notifications", String.class));
-            verify(sender, times(2)).sendWelcome(id.toString(), "test@example.invalid");
+                jdbc.update("UPDATE outbox_notifications SET next_attempt_at = ?", Timestamp.from(Instant.now()));
+                worker.deliverDueNotifications();
+                worker.deliverDueNotifications();
+                assertEquals("SENT", jdbc.queryForObject("SELECT status FROM outbox_notifications", String.class));
+                verify(sender, times(2)).sendWelcome(id.toString(), "test@example.invalid");
 
-            var failed = UUID.randomUUID();
-            transaction.executeWithoutResult(status -> outbox.enqueueWelcome(failed, "fail@example.invalid"));
-            doThrow(new MailSendException("SMTP unavailable")).when(sender).sendWelcome(anyString(),
-                    org.mockito.ArgumentMatchers.eq("fail@example.invalid"));
-            jdbc.update("UPDATE outbox_notifications SET attempts = 4 WHERE id = ?", failed.toString());
-            worker.deliverDueNotifications();
-            worker.deliverDueNotifications();
-            assertEquals("FAILED", jdbc.queryForObject("SELECT status FROM outbox_notifications WHERE id = ?",
-                    String.class, failed.toString()));
-            verify(sender).sendWelcome(failed.toString(), "fail@example.invalid");
+                var failed = UUID.randomUUID();
+                transaction.executeWithoutResult(status -> outbox.enqueueWelcome(failed, "fail@example.invalid"));
+                doThrow(new MailSendException("SMTP unavailable")).when(sender).sendWelcome(anyString(),
+                        org.mockito.ArgumentMatchers.eq("fail@example.invalid"));
+                jdbc.update("UPDATE outbox_notifications SET attempts = 4 WHERE id = ?", failed.toString());
+                worker.deliverDueNotifications();
+                worker.deliverDueNotifications();
+                assertEquals("FAILED", jdbc.queryForObject("SELECT status FROM outbox_notifications WHERE id = ?",
+                        String.class, failed.toString()));
+                verify(sender).sendWelcome(failed.toString(), "fail@example.invalid");
+                assertEquals(1.0, metrics.get("logitrack.notification.outbox.failed").gauge().value());
+                assertEquals(1L, health.health().getDetails().get("failed"));
+            } finally {
+                metrics.close();
+            }
         } finally {
             database.shutdown();
         }

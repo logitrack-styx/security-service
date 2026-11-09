@@ -15,9 +15,10 @@ spring:
     properties:
       mail.smtp.auth: ${SMTP_AUTH:false}
       mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
-      mail.smtp.connectiontimeout: 3000
-      mail.smtp.timeout: 5000
-      mail.smtp.writetimeout: 5000
+      mail.smtp.starttls.required: ${SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: ${SMTP_CONNECTION_TIMEOUT_MS:3000}
+      mail.smtp.timeout: ${SMTP_READ_TIMEOUT_MS:5000}
+      mail.smtp.writetimeout: ${SMTP_WRITE_TIMEOUT_MS:5000}
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:validate}
@@ -38,6 +39,7 @@ mail:
   notifications:
     enabled: ${MAIL_NOTIFICATIONS_ENABLED:false}
     from: ${SMTP_FROM:no-reply@logitrack.invalid}
+    poll-delay-ms: ${MAIL_POLL_DELAY_MS:5000}
 
 management:
   health:
