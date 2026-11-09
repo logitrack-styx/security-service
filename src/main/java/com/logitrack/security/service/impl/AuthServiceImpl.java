@@ -13,6 +13,7 @@ import com.logitrack.security.exception.CredencialesInvalidasException;
 import com.logitrack.security.exception.UsuarioNoEncontradoException;
 import com.logitrack.security.exception.UsuarioYaExistenteException;
 import com.logitrack.security.model.Usuario;
+import com.logitrack.security.notification.NotificationOutbox;
 import com.logitrack.security.repository.UsuarioRepository;
 import com.logitrack.security.service.interfaces.AuthService;
 import com.logitrack.security.service.interfaces.JwtService;
@@ -28,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
 	private final UsuarioRepository usuarioRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
+	private final NotificationOutbox notificationOutbox;
 
 	@Override
 	@Transactional
@@ -49,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
 	    		.build();
 
 		usuario = usuarioRepository.save(usuario);
+		notificationOutbox.enqueueWelcome(usuario.getId(), usuario.getEmail());
 
 		log.info("Se ha registrado el Usuario: " + usuario.getId());
 	    return mapToResponse(usuario);
