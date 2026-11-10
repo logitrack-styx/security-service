@@ -7,6 +7,17 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/logitrack_security}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: 3000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:validate}
@@ -23,7 +34,15 @@ security:
     issuer: ${JWT_ISSUER:logitrack-security}
     access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:3600}
 
+mail:
+  notifications:
+    enabled: ${MAIL_NOTIFICATIONS_ENABLED:false}
+    from: ${SMTP_FROM:no-reply@logitrack.invalid}
+
 management:
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:

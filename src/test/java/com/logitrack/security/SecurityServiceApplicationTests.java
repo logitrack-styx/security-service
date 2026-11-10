@@ -38,7 +38,9 @@ import com.logitrack.security.repository.UsuarioRepository;
         "spring.datasource.password=",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false",
-        "security.jwt.issuer=logitrack-security"
+        "security.jwt.issuer=logitrack-security",
+        "mail.notifications.enabled=true",
+        "mail.notifications.poll-delay-ms=3600000"
 })
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
@@ -48,6 +50,7 @@ class SecurityServiceApplicationTests {
     @Autowired UsuarioRepository usuarios;
     @Autowired ObjectMapper mapper;
     @Autowired org.springframework.security.crypto.password.PasswordEncoder encoder;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     @Test
     void loginAndValidationErrorsUseCommonUtcEnvelope() throws Exception {
@@ -116,6 +119,7 @@ class SecurityServiceApplicationTests {
 
     @BeforeEach
     void limpiar() {
+        jdbc.update("DELETE FROM outbox_notifications");
         usuarios.deleteAll();
     }
 
@@ -129,7 +133,12 @@ class SecurityServiceApplicationTests {
                 .content(registro()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value("cliente-prueba"))
-                .andExpect(jsonPath("$.role").value("CLIENTE"));
+                .andExpect(jsonPath("$.role").value("CLIENTE"))
+                .andExpect(jsonPath("$.eneable").value(true));
+        var cliente = usuarios.findByUsername("cliente-prueba").orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals("PENDING",
+                jdbc.queryForObject("SELECT status FROM outbox_notifications WHERE id = ?",
+                        String.class, cliente.getId().toString()));
     }
 
     @Test
